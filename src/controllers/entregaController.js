@@ -35,6 +35,12 @@ export function historicoEntregaController(service) {
   return (req, res) => executar(res, () => res.json(service.historico(req.params.id)));
 }
 
+export function atribuirMotoristaController(service) {
+  return (req, res) => executar(res, () => res.json(
+    service.atribuirMotorista(req.params.id, req.body?.motoristaId)
+  ));
+}
+
 export function removerEntregaController(service) {
   return (req, res) => executar(res, () => {
     service.remover(req.params.id);
