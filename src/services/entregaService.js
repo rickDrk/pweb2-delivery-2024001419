@@ -12,8 +12,9 @@ export class RegraNegocioError extends Error {
 }
 
 export class EntregaService {
-  constructor(repository) {
+  constructor(repository, motoristaRepository = null) {
     this.repository = repository;
+    this.motoristaRepository = motoristaRepository;
   }
 
   criar({ descricao, origem, destino }) {
@@ -47,7 +48,7 @@ export class EntregaService {
     if (status && !STATUS_VALIDOS.has(status)) {
       throw new RegraNegocioError('status inválido', 400);
     }
-    return this.repository.listar(status);
+    return this.repository.listarTodos(status ? { status } : {});
   }
 
   buscarPorId(id) {
@@ -71,7 +72,7 @@ export class EntregaService {
       data: new Date().toISOString(),
     });
 
-    return this.repository.salvar(entrega);
+    return this.repository.atualizar(entrega.id, entrega);
   }
 
   cancelar(id) {
@@ -88,7 +89,38 @@ export class EntregaService {
       data: new Date().toISOString(),
     });
 
-    return this.repository.salvar(entrega);
+    return this.repository.atualizar(entrega.id, entrega);
+  }
+
+  atribuirMotorista(id, motoristaId) {
+    const entrega = this.buscarPorId(id);
+
+    if (entrega.status !== 'CRIADA') {
+      throw new RegraNegocioError('somente entregas CRIADA podem receber motorista', 422);
+    }
+
+    if (!this.motoristaRepository) {
+      throw new RegraNegocioError('repository de motoristas não configurado', 500);
+    }
+
+    const motorista = this.motoristaRepository.buscarPorId(motoristaId);
+    if (!motorista) {
+      throw new RegraNegocioError('motorista não encontrado', 404);
+    }
+
+    if (motorista.status !== 'ATIVO') {
+      throw new RegraNegocioError('motorista INATIVO não pode ser atribuído', 422);
+    }
+
+    entrega.motoristaId = motorista.id;
+    entrega.historico.push({
+      status: entrega.status,
+      evento: 'MOTORISTA_ATRIBUIDO',
+      motoristaId: motorista.id,
+      data: new Date().toISOString(),
+    });
+
+    return this.repository.atualizar(entrega.id, entrega);
   }
 
   historico(id) {
@@ -125,9 +157,9 @@ export class EntregaService {
     entrega.historico.push({
       status: entrega.status,
       evento: 'ENTREGA_ATUALIZADA',
-      data: new Date().toString(),
+      data: new Date().toISOString(),
     });
 
-    return this.repository.salvar(entrega);
+    return this.repository.atualizar(entrega.id, entrega);
   }
 }
