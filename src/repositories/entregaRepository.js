@@ -1,8 +1,21 @@
-import { gerarId, listarEntregas } from '../database/entregas.js';
+import { gerarId } from '../database/entregas.js';
 
+/**
+ * @typedef {Object} IEntregasRepository
+ * @property {function(Object=): Array} listarTodos
+ * @property {function(number): Object|null} buscarPorId
+ * @property {function(Object): Object} criar
+ * @property {function(number, Object): Object|null} atualizar 
+ * @property {function(number): boolean} remover 
+ * @property {function(string,string,string): Object|null} buscarDuplicadaAtiva 
+ */
+
+/**
+ * Repository de Entregas.
+ */
 export class EntregaRepository {
-  constructor() {
-    this.entregas = listarEntregas();
+  constructor(database) {
+    this.entregas = database.entregas;
   }
 
   criar(dados) {
@@ -11,9 +24,13 @@ export class EntregaRepository {
     return entrega;
   }
 
-  listar(status) {
-    if (!status) return [...this.entregas];
-    return this.entregas.filter((entrega) => entrega.status === status);
+  listarTodos(filtros = {}) {
+    const { status, motoristaId } = filtros;
+    return this.entregas.filter((entrega) => {
+      if (status && entrega.status !== status) return false;
+      if (motoristaId !== undefined && entrega.motoristaId !== Number(motoristaId)) return false;
+      return true;
+    });
   }
 
   buscarPorId(id) {
@@ -30,11 +47,19 @@ export class EntregaRepository {
     ) ?? null;
   }
 
-  salvar(entrega) {
-    const indice = this.entregas.findIndex((item) => item.id === entrega.id);
+  atualizar(id, dados) {
+    const indice = this.entregas.findIndex((item) => item.id === Number(id));
     if (indice === -1) return null;
-    this.entregas[indice] = entrega;
-    return entrega;
+    this.entregas[indice] = dados;
+    return dados;
+  }
+
+  listar(status) {
+    return this.listarTodos(status ? { status } : {});
+  }
+
+  salvar(entrega) {
+    return this.atualizar(entrega.id, entrega);
   }
 
   remover(id) {
