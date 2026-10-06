@@ -1,4 +1,4 @@
-import { gerarId } from '../database/entregas.js';
+import { gerarId } from '../database/database.js';
 
 /**
  * @typedef {Object} IEntregasRepository
