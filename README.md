@@ -6,33 +6,51 @@
 
 ## Como usar este repositório
 
-1. Clique em **"Use this template"** e crie **`pweb2-delivery-<matricula>`** (ex.: `pweb2-delivery-20231012345`).
-   Este é o repositório que você usará o **semestre inteiro** (evolui a cada capítulo).
-2. Clone, instale e rode:
+1. Instale as dependências:
    ```bash
    npm install
-   npm start                                        # http://localhost:3000
-   # em outro terminal — autograder:
-   npm run check                                    # = BASE_URL=http://localhost:3000 node autograder/check.mjs
    ```
-3. A cada `git push`, o **GitHub Actions** roda o autograder e mostra a nota na aba **Actions**
-   (resumo do job). O `autograder/check.mjs` é **aberto** — leia para saber exatamente o que se espera.
+2. Crie o `.env` a partir do exemplo:
+   ```bash
+   cp .env.example .env
+   ```
+3. Gere o Prisma Client e aplique a migration:
+   ```bash
+   npx prisma generate
+   npx prisma migrate deploy
+   ```
+4. Rode a API:
+   ```bash
+   npm start
+   ```
 
-## O que implementar (em `src/`)
+Para desenvolvimento local com criação/atualização de migrations:
+```bash
+npx prisma migrate dev
+```
+
+Para inspecionar os dados:
+```bash
+npx prisma studio
+```
+
+## Arquitetura
 
 ```
-src/
-├── controllers/   # traduz HTTP ↔ service (sem regra de negócio)
-├── services/      # TODA a regra de negócio
-├── repositories/  # só acesso a dados
-├── database/      # persistência SIMULADA em memória (sem banco real, sem ORM)
-├── routes/        # composição das dependências (injeção) + monta em /api
-└── utils/
+HTTP
+  ↓
+Routes / Composition Root
+  ↓
+Controllers
+  ↓
+Services
+  ↓
+Repositories Prisma
+  ↓
+Prisma Client (singleton)
+  ↓
+SQLite
 ```
-
-- **Regra de negócio só no Service.** Injeção de dependência no **composition root** (`src/routes`).
-- O `server.js` só configura o app (já traz o `GET /api/health` exigido — não remova).
-
 ## Duas etapas (ver os enunciados completos)
 
 - **Atividade 05 — Entregas em camadas:** CRUD de `/api/entregas`, ciclo de status
@@ -50,5 +68,6 @@ src/
   (duplicata/CPF) · `422` regra de estado (transição/atribuição inválida).
 - Execução: `npm start`, respeita `process.env.PORT`, branch `main`.
 
-Faça **um commit por avanço** (Conventional Commits, ex.: `feat(entregas): valida origem ≠ destino`).
-Bom trabalho! 🚀
+## Persistência
+
+O schema está em `prisma/schema.prisma` e a migration inicial em `prisma/migrations/`. O arquivo `prisma/dev.db` é gerado localmente e não deve ser versionado.
