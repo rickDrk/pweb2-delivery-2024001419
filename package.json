@@ -4,7 +4,7 @@
   "description": "Delivery Tracker — Exercício do Cap. 5 (Prisma + SQLite).",
   "type": "module",
   "scripts": {
-    "prestart": "node -e \"const {spawnSync}=require('node:child_process');const env={...process.env,DATABASE_URL:process.env.DATABASE_URL||'file:./dev.db'};for(const args of [['generate'],['migrate','deploy']]){const r=spawnSync(process.execPath,['node_modules/prisma/build/index.js',...args],{env,stdio:'inherit'});if(r.error){console.error(r.error);process.exit(1)}if(r.status!==0)process.exit(r.status||1)}\"",
+    "prestart": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')) fs.copyFileSync('.env.example', '.env')\" && npx prisma generate && npx prisma migrate deploy",
     "start": "node server.js",
     "dev": "node --watch server.js",
     "check": "node autograder/check.mjs",
