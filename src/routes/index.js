@@ -23,14 +23,12 @@ import {
 } from '../controllers/motoristaController.js';
 
 /**
- * Composition root da Atividade 06.
- * As dependências são criadas em um único ponto e injetadas nos Services.
+ * Composition root 
  */
 export function criarRotas() {
   const router = express.Router();
-  const database = new Database();
-  const entregaRepository = new EntregaRepository(database);
-  const motoristaRepository = new MotoristaRepository(database);
+  const entregaRepository = new EntregaRepository();
+  const motoristaRepository = new MotoristaRepository();
   const entregaService = new EntregaService(entregaRepository, motoristaRepository);
   const motoristaService = new MotoristaService(motoristaRepository, entregaRepository);
 
