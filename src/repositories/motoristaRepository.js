@@ -1,15 +1,5 @@
 import prisma from '../config/database.js';
 
-function mapMotorista(motorista) {
-  return {
-    id: motorista.id,
-    nome: motorista.nome,
-    cpf: motorista.cpf,
-    ...(motorista.placaVeiculo ? { placaVeiculo: motorista.placaVeiculo } : {}),
-    status: motorista.status,
-  };
-}
-
 /**
  * @typedef {Object} IMotoristasRepository
  * @property {function(): Promise<Array>} listarTodos
@@ -19,26 +9,27 @@ function mapMotorista(motorista) {
  */
 
 /**
- * Repository de Motoristas com Prisma.
+ * Repository de Motoristas.
  */
 export class MotoristaRepository {
+  constructor(database = prisma) {
+    this.motoristas = database.motorista;
+  }
+
   async listarTodos() {
-    const motoristas = await prisma.motorista.findMany({ orderBy: { id: 'asc' } });
-    return motoristas.map(mapMotorista);
+    return this.motoristas.findMany({ orderBy: { id: 'asc' } });
   }
 
   async buscarPorId(id) {
-    const motorista = await prisma.motorista.findUnique({ where: { id: Number(id) } });
-    return motorista ? mapMotorista(motorista) : null;
+    return this.motoristas.findUnique({ where: { id: Number(id) } });
   }
 
   async buscarPorCpf(cpf) {
-    const motorista = await prisma.motorista.findUnique({ where: { cpf } });
-    return motorista ? mapMotorista(motorista) : null;
+    return this.motoristas.findUnique({ where: { cpf } });
   }
 
   async criar(dados) {
-    const motorista = await prisma.motorista.create({
+    return this.motoristas.create({
       data: {
         nome: dados.nome,
         cpf: dados.cpf,
@@ -46,7 +37,6 @@ export class MotoristaRepository {
         status: dados.status ?? 'ATIVO',
       },
     });
-
-    return mapMotorista(motorista);
   }
 }
+
