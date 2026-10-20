@@ -1,5 +1,4 @@
 import express from 'express';
-import { Database } from '../database/database.js';
 import { EntregaRepository } from '../repositories/entregaRepository.js';
 import { MotoristaRepository } from '../repositories/motoristaRepository.js';
 import { EntregaService } from '../services/entregaService.js';
@@ -23,7 +22,8 @@ import {
 } from '../controllers/motoristaController.js';
 
 /**
- * Composition root 
+ * Composition root da Atividade 07.
+ * Os repositories Prisma são criados/injetados em um único ponto.
  */
 export function criarRotas() {
   const router = express.Router();

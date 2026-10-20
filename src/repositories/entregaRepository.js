@@ -1,71 +1,142 @@
 import prisma from '../config/database.js';
 
+function mapEvento(evento) {
+  return {
+    status: evento.status,
+    evento: evento.evento,
+    ...(evento.motoristaId !== null ? { motoristaId: evento.motoristaId } : {}),
+    data: evento.data.toISOString(),
+  };
+}
+
+function mapEntrega(entrega) {
+  return {
+    id: entrega.id,
+    descricao: entrega.descricao,
+    origem: entrega.origem,
+    destino: entrega.destino,
+    status: entrega.status,
+    ...(entrega.motoristaId !== null ? { motoristaId: entrega.motoristaId } : {}),
+    historico: entrega.historico.map(mapEvento),
+  };
+}
+
 /**
  * @typedef {Object} IEntregasRepository
- * @property {function(Object=): Array} listarTodos
- * @property {function(number): Object|null} buscarPorId
- * @property {function(Object): Object} criar
- * @property {function(number, Object): Object|null} atualizar 
- * @property {function(number): boolean} remover 
- * @property {function(string,string,string): Object|null} buscarDuplicadaAtiva 
+ * @property {function(Object=): Promise<Array>} listarTodos
+ * @property {function(number): Promise<Object|null>} buscarPorId
+ * @property {function(Object): Promise<Object>} criar
+ * @property {function(number, Object): Promise<Object|null>} atualizar
+ * @property {function(number): Promise<boolean>} remover
+ * @property {function(string,string,string): Promise<Object|null>} buscarDuplicadaAtiva
  */
 
 /**
- * Repository de Entregas.
+ * Repository de Entregas com Prisma.
  */
 export class EntregaRepository {
-  constructor(database) {
-    this.entregas = database.entregas;
-  }
-
-  criar(dados) {
-    const entrega = { id: gerarId(), ...dados };
-    this.entregas.push(entrega);
-    return entrega;
-  }
-
-  listarTodos(filtros = {}) {
-    const { status, motoristaId } = filtros;
-    return this.entregas.filter((entrega) => {
-      if (status && entrega.status !== status) return false;
-      if (motoristaId !== undefined && entrega.motoristaId !== Number(motoristaId)) return false;
-      return true;
+  async criar(dados) {
+    const entrega = await prisma.entrega.create({
+      data: {
+        descricao: dados.descricao,
+        origem: dados.origem,
+        destino: dados.destino,
+        status: dados.status,
+        motoristaId: dados.motoristaId ?? null,
+        historico: {
+          create: (dados.historico ?? []).map((evento) => ({
+            status: evento.status,
+            evento: evento.evento,
+            motoristaId: evento.motoristaId ?? null,
+            data: new Date(evento.data),
+          })),
+        },
+      },
+      include: { historico: { orderBy: { id: 'asc' } } },
     });
+
+    return mapEntrega(entrega);
   }
 
-  buscarPorId(id) {
-    return this.entregas.find((entrega) => entrega.id === Number(id)) ?? null;
+  async listarTodos(filtros = {}) {
+    const { status, motoristaId } = filtros;
+    const entregas = await prisma.entrega.findMany({
+      where: {
+        ...(status ? { status } : {}),
+        ...(motoristaId !== undefined ? { motoristaId: Number(motoristaId) } : {}),
+      },
+      include: { historico: { orderBy: { id: 'asc' } } },
+      orderBy: { id: 'asc' },
+    });
+
+    return entregas.map(mapEntrega);
   }
 
-  buscarDuplicadaAtiva(descricao, origem, destino) {
+  async buscarPorId(id) {
+    const entrega = await prisma.entrega.findUnique({
+      where: { id: Number(id) },
+      include: { historico: { orderBy: { id: 'asc' } } },
+    });
+
+    return entrega ? mapEntrega(entrega) : null;
+  }
+
+  async buscarDuplicadaAtiva(descricao, origem, destino) {
+    const entregas = await prisma.entrega.findMany({
+      where: { status: { in: ['CRIADA', 'EM_TRANSITO'] } },
+      include: { historico: { orderBy: { id: 'asc' } } },
+    });
+
     const normalizar = (valor) => String(valor).trim().toLowerCase();
-    return this.entregas.find((entrega) =>
-      ['CRIADA', 'EM_TRANSITO'].includes(entrega.status) &&
-      normalizar(entrega.descricao) === normalizar(descricao) &&
-      normalizar(entrega.origem) === normalizar(origem) &&
-      normalizar(entrega.destino) === normalizar(destino)
-    ) ?? null;
+    const entrega = entregas.find((item) =>
+      normalizar(item.descricao) === normalizar(descricao) &&
+      normalizar(item.origem) === normalizar(origem) &&
+      normalizar(item.destino) === normalizar(destino)
+    );
+
+    return entrega ? mapEntrega(entrega) : null;
   }
 
-  atualizar(id, dados) {
-    const indice = this.entregas.findIndex((item) => item.id === Number(id));
-    if (indice === -1) return null;
-    this.entregas[indice] = dados;
-    return dados;
+  async atualizar(id, dados) {
+    const existente = await prisma.entrega.findUnique({ where: { id: Number(id) } });
+    if (!existente) return null;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.entrega.update({
+        where: { id: Number(id) },
+        data: {
+          descricao: dados.descricao,
+          origem: dados.origem,
+          destino: dados.destino,
+          status: dados.status,
+          motoristaId: dados.motoristaId ?? null,
+        },
+      });
+
+      await tx.evento.deleteMany({ where: { entregaId: Number(id) } });
+      if (dados.historico?.length) {
+        await tx.evento.createMany({
+          data: dados.historico.map((evento) => ({
+            status: evento.status,
+            evento: evento.evento,
+            motoristaId: evento.motoristaId ?? null,
+            data: new Date(evento.data),
+            entregaId: Number(id),
+          })),
+        });
+      }
+    });
+
+    return this.buscarPorId(id);
   }
 
-  listar(status) {
-    return this.listarTodos(status ? { status } : {});
-  }
-
-  salvar(entrega) {
-    return this.atualizar(entrega.id, entrega);
-  }
-
-  remover(id) {
-    const indice = this.entregas.findIndex((item) => item.id === Number(id));
-    if (indice === -1) return false;
-    this.entregas.splice(indice, 1);
-    return true;
+  async remover(id) {
+    try {
+      await prisma.entrega.delete({ where: { id: Number(id) } });
+      return true;
+    } catch (erro) {
+      if (erro.code === 'P2025') return false;
+      throw erro;
+    }
   }
 }

@@ -17,7 +17,7 @@ export class EntregaService {
     this.motoristaRepository = motoristaRepository;
   }
 
-  criar({ descricao, origem, destino }) {
+  async criar({ descricao, origem, destino }) {
     if ([descricao, origem, destino].some((valor) => typeof valor !== 'string' || !valor.trim())) {
       throw new RegraNegocioError('descricao, origem e destino são obrigatórios', 400);
     }
@@ -26,12 +26,12 @@ export class EntregaService {
       throw new RegraNegocioError('origem e destino devem ser diferentes', 400);
     }
 
-    if (this.repository.buscarDuplicadaAtiva(descricao, origem, destino)) {
+    if (await this.repository.buscarDuplicadaAtiva(descricao, origem, destino)) {
       throw new RegraNegocioError('entrega duplicada ativa', 409);
     }
 
     const agora = new Date().toISOString();
-    return this.repository.criar({
+    return await this.repository.criar({
       descricao: descricao.trim(),
       origem: origem.trim(),
       destino: destino.trim(),
@@ -44,21 +44,21 @@ export class EntregaService {
     });
   }
 
-  listar(status) {
+  async listar(status) {
     if (status && !STATUS_VALIDOS.has(status)) {
       throw new RegraNegocioError('status inválido', 400);
     }
-    return this.repository.listarTodos(status ? { status } : {});
+    return await this.repository.listarTodos(status ? { status } : {});
   }
 
-  buscarPorId(id) {
-    const entrega = this.repository.buscarPorId(id);
+  async buscarPorId(id) {
+    const entrega = await this.repository.buscarPorId(id);
     if (!entrega) throw new RegraNegocioError('entrega não encontrada', 404);
     return entrega;
   }
 
-  avancar(id) {
-    const entrega = this.buscarPorId(id);
+  async avancar(id) {
+    const entrega = await this.buscarPorId(id);
     const proximoStatus = TRANSICOES[entrega.status];
 
     if (!proximoStatus) {
@@ -72,11 +72,11 @@ export class EntregaService {
       data: new Date().toISOString(),
     });
 
-    return this.repository.atualizar(entrega.id, entrega);
+    return await this.repository.atualizar(entrega.id, entrega);
   }
 
-  cancelar(id) {
-    const entrega = this.buscarPorId(id);
+  async cancelar(id) {
+    const entrega = await this.buscarPorId(id);
 
     if (!['CRIADA', 'EM_TRANSITO'].includes(entrega.status)) {
       throw new RegraNegocioError('não é possível cancelar uma entrega neste estado', 422);
@@ -89,11 +89,11 @@ export class EntregaService {
       data: new Date().toISOString(),
     });
 
-    return this.repository.atualizar(entrega.id, entrega);
+    return await this.repository.atualizar(entrega.id, entrega);
   }
 
-  atribuirMotorista(id, motoristaId) {
-    const entrega = this.buscarPorId(id);
+  async atribuirMotorista(id, motoristaId) {
+    const entrega = await this.buscarPorId(id);
 
     if (entrega.status !== 'CRIADA') {
       throw new RegraNegocioError('somente entregas CRIADA podem receber motorista', 422);
@@ -103,7 +103,7 @@ export class EntregaService {
       throw new RegraNegocioError('repository de motoristas não configurado', 500);
     }
 
-    const motorista = this.motoristaRepository.buscarPorId(motoristaId);
+    const motorista = await this.motoristaRepository.buscarPorId(motoristaId);
     if (!motorista) {
       throw new RegraNegocioError('motorista não encontrado', 404);
     }
@@ -120,21 +120,21 @@ export class EntregaService {
       data: new Date().toISOString(),
     });
 
-    return this.repository.atualizar(entrega.id, entrega);
+    return await this.repository.atualizar(entrega.id, entrega);
   }
 
-  historico(id) {
-    const entrega = this.buscarPorId(id);
+  async historico(id) {
+    const entrega = await this.buscarPorId(id);
     return entrega.historico;
   }
 
-  remover(id) {
-    this.buscarPorId(id);
-    this.repository.remover(id);
+  async remover(id) {
+    await this.buscarPorId(id);
+    await this.repository.remover(id);
   }
 
-  atualizar(id, dados) {
-    const entrega = this.buscarPorId(id);
+  async atualizar(id, dados) {
+    const entrega = await this.buscarPorId(id);
 
     if (entrega.status === 'ENTREGUE' || entrega.status === 'CANCELADA') {
       throw new RegraNegocioError('entrega encerrada não pode ser alterada', 422);
@@ -160,6 +160,6 @@ export class EntregaService {
       data: new Date().toISOString(),
     });
 
-    return this.repository.atualizar(entrega.id, entrega);
+    return await this.repository.atualizar(entrega.id, entrega);
   }
 }

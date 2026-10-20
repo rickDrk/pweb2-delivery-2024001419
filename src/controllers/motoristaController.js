@@ -1,6 +1,6 @@
-function executar(res, fn) {
+async function executar(res, fn) {
   try {
-    return fn();
+    return await fn();
   } catch (erro) {
     const status = erro.status ?? 500;
     return res.status(status).json({ erro: erro.message || 'erro interno' });
@@ -8,19 +8,19 @@ function executar(res, fn) {
 }
 
 export function criarMotoristaController(service) {
-  return (req, res) => executar(res, () => res.status(201).json(service.criar(req.body ?? {})));
+  return (req, res) => executar(res, async () => res.status(201).json(await service.criar(req.body ?? {})));
 }
 
 export function listarMotoristasController(service) {
-  return (req, res) => executar(res, () => res.json(service.listar()));
+  return (req, res) => executar(res, async () => res.json(await service.listar()));
 }
 
 export function buscarMotoristaController(service) {
-  return (req, res) => executar(res, () => res.json(service.buscarPorId(req.params.id)));
+  return (req, res) => executar(res, async () => res.json(await service.buscarPorId(req.params.id)));
 }
 
 export function listarEntregasMotoristaController(service) {
-  return (req, res) => executar(res, () => res.json(
-    service.entregas(req.params.id, req.query.status)
+  return (req, res) => executar(res, async () => res.json(
+    await service.entregas(req.params.id, req.query.status)
   ));
 }

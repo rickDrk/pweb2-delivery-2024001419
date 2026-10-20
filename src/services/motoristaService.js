@@ -6,17 +6,17 @@ export class MotoristaService {
     this.entregaRepository = entregaRepository;
   }
 
-  criar({ nome, cpf, placaVeiculo }) {
+  async criar({ nome, cpf, placaVeiculo }) {
     if ([nome, cpf].some((valor) => typeof valor !== 'string' || !valor.trim())) {
       throw new RegraNegocioError('nome e cpf são obrigatórios', 400);
     }
 
     const cpfNormalizado = cpf.trim();
-    if (this.repository.buscarPorCpf(cpfNormalizado)) {
+    if (await this.repository.buscarPorCpf(cpfNormalizado)) {
       throw new RegraNegocioError('CPF já cadastrado', 409);
     }
 
-    return this.repository.criar({
+    return await this.repository.criar({
       nome: nome.trim(),
       cpf: cpfNormalizado,
       ...(typeof placaVeiculo === 'string' && placaVeiculo.trim()
@@ -26,18 +26,18 @@ export class MotoristaService {
     });
   }
 
-  listar() {
-    return this.repository.listarTodos();
+  async listar() {
+    return await this.repository.listarTodos();
   }
 
-  buscarPorId(id) {
-    const motorista = this.repository.buscarPorId(id);
+  async buscarPorId(id) {
+    const motorista = await this.repository.buscarPorId(id);
     if (!motorista) throw new RegraNegocioError('motorista não encontrado', 404);
     return motorista;
   }
 
-  entregas(id, status) {
-    this.buscarPorId(id);
-    return this.entregaRepository.listarTodos({ motoristaId: id, status });
+  async entregas(id, status) {
+    await this.buscarPorId(id);
+    return await this.entregaRepository.listarTodos({ motoristaId: id, status });
   }
 }

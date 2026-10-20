@@ -1,36 +1,52 @@
 import prisma from '../config/database.js';
 
+function mapMotorista(motorista) {
+  return {
+    id: motorista.id,
+    nome: motorista.nome,
+    cpf: motorista.cpf,
+    ...(motorista.placaVeiculo ? { placaVeiculo: motorista.placaVeiculo } : {}),
+    status: motorista.status,
+  };
+}
+
 /**
  * @typedef {Object} IMotoristasRepository
- * @property {function(): Array} listarTodos .
- * @property {function(number): Object|null} buscarPorId 
- * @property {function(string): Object|null} buscarPorCpf 
- * @property {function(Object): Object} criar 
+ * @property {function(): Promise<Array>} listarTodos
+ * @property {function(number): Promise<Object|null>} buscarPorId
+ * @property {function(string): Promise<Object|null>} buscarPorCpf
+ * @property {function(Object): Promise<Object>} criar
  */
 
 /**
- * Repository de Motoristas.
+ * Repository de Motoristas com Prisma.
  */
 export class MotoristaRepository {
-  constructor(database) {
-    this.motoristas = database.motoristas;
+  async listarTodos() {
+    const motoristas = await prisma.motorista.findMany({ orderBy: { id: 'asc' } });
+    return motoristas.map(mapMotorista);
   }
 
-  listarTodos() {
-    return [...this.motoristas];
+  async buscarPorId(id) {
+    const motorista = await prisma.motorista.findUnique({ where: { id: Number(id) } });
+    return motorista ? mapMotorista(motorista) : null;
   }
 
-  buscarPorId(id) {
-    return this.motoristas.find((motorista) => motorista.id === Number(id)) ?? null;
+  async buscarPorCpf(cpf) {
+    const motorista = await prisma.motorista.findUnique({ where: { cpf } });
+    return motorista ? mapMotorista(motorista) : null;
   }
 
-  buscarPorCpf(cpf) {
-    return this.motoristas.find((motorista) => motorista.cpf === cpf) ?? null;
-  }
+  async criar(dados) {
+    const motorista = await prisma.motorista.create({
+      data: {
+        nome: dados.nome,
+        cpf: dados.cpf,
+        placaVeiculo: dados.placaVeiculo ?? null,
+        status: dados.status ?? 'ATIVO',
+      },
+    });
 
-  criar(dados) {
-    const motorista = { id: gerarIdMotorista(), ...dados };
-    this.motoristas.push(motorista);
-    return motorista;
+    return mapMotorista(motorista);
   }
 }

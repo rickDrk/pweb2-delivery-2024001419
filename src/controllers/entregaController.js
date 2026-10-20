@@ -1,6 +1,6 @@
-function executar(res, fn) {
+async function executar(res, fn) {
   try {
-    return fn();
+    return await fn();
   } catch (erro) {
     const status = erro.status ?? 500;
     return res.status(status).json({ erro: erro.message || 'erro interno' });
@@ -8,42 +8,42 @@ function executar(res, fn) {
 }
 
 export function criarEntregaController(service) {
-  return (req, res) => executar(res, () => res.status(201).json(service.criar(req.body ?? {})));
+  return (req, res) => executar(res, async () => res.status(201).json(await service.criar(req.body ?? {})));
 }
 
 export function listarEntregasController(service) {
-  return (req, res) => executar(res, () => res.json(service.listar(req.query.status)));
+  return (req, res) => executar(res, async () => res.json(await service.listar(req.query.status)));
 }
 
 export function buscarEntregaController(service) {
-  return (req, res) => executar(res, () => res.json(service.buscarPorId(req.params.id)));
+  return (req, res) => executar(res, async () => res.json(await service.buscarPorId(req.params.id)));
 }
 
 export function atualizarEntregaController(service) {
-  return (req, res) => executar(res, () => res.json(service.atualizar(req.params.id, req.body ?? {})));
+  return (req, res) => executar(res, async () => res.json(await service.atualizar(req.params.id, req.body ?? {})));
 }
 
 export function avancarEntregaController(service) {
-  return (req, res) => executar(res, () => res.json(service.avancar(req.params.id)));
+  return (req, res) => executar(res, async () => res.json(await service.avancar(req.params.id)));
 }
 
 export function cancelarEntregaController(service) {
-  return (req, res) => executar(res, () => res.json(service.cancelar(req.params.id)));
+  return (req, res) => executar(res, async () => res.json(await service.cancelar(req.params.id)));
 }
 
 export function historicoEntregaController(service) {
-  return (req, res) => executar(res, () => res.json(service.historico(req.params.id)));
+  return (req, res) => executar(res, async () => res.json(await service.historico(req.params.id)));
 }
 
 export function atribuirMotoristaController(service) {
-  return (req, res) => executar(res, () => res.json(
-    service.atribuirMotorista(req.params.id, req.body?.motoristaId)
+  return (req, res) => executar(res, async () => res.json(
+    await service.atribuirMotorista(req.params.id, req.body?.motoristaId)
   ));
 }
 
 export function removerEntregaController(service) {
-  return (req, res) => executar(res, () => {
-    service.remover(req.params.id);
+  return (req, res) => executar(res, async () => {
+    await service.remover(req.params.id);
     return res.status(204).send();
   });
 }
