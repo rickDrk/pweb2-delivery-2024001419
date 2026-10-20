@@ -1,4 +1,4 @@
-import { gerarId } from '../database/database.js';
+import prisma from '../config/database.js';
 
 /**
  * @typedef {Object} IEntregasRepository
