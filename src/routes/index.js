@@ -22,7 +22,7 @@ import {
 } from '../controllers/motoristaController.js';
 
 /**
- * Composition root da Atividade 07.
+ * Composition root
  * Os repositories Prisma são criados/injetados em um único ponto.
  */
 export function criarRotas() {
