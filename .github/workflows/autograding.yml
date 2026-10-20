@@ -1,6 +1,5 @@
 name: Autograding
 
-# Roda a cada push (e manualmente). Corrige a conformidade da API (comportamento).
 on:
   push:
   workflow_dispatch:
@@ -11,6 +10,7 @@ permissions:
 jobs:
   autograding:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,10 +21,20 @@ jobs:
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
 
+      - name: Gerar Prisma Client
+        run: npx prisma generate
+
+      - name: Aplicar migrations
+        env:
+          DATABASE_URL: file:./dev.db
+        run: npx prisma migrate deploy
+
       - name: Subir o servidor
+        env:
+          DATABASE_URL: file:./dev.db
         run: |
           PORT=3000 npm start &
-          sleep 2
+          sleep 3
 
-      - name: Corrigir (autograder de conformidade)
+      - name: Rodar autograder de conformidade
         run: BASE_URL=http://localhost:3000 node autograder/check.mjs
